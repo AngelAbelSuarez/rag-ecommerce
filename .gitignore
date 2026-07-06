@@ -1,0 +1,34 @@
+# Skills y agentes (no son parte del proyecto)
+.agents/
+.atl/
+skills-lock.json
+
+# Entorno y config local
+.env
+backend/.env
+
+# Vector store (se regenera con ingest)
+backend/chroma_db/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+*.egg
+
+# Node / frontend (cuando exista)
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
