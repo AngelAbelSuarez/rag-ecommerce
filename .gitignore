@@ -1,7 +1,11 @@
-# Skills y agentes (no son parte del proyecto)
+# Skills, agentes y config de herramientas
 .agents/
 .atl/
 skills-lock.json
+opencode.json
+design.documind.op
+
+# SDD artifacts (solo locales)
 openspec
 
 # Entorno y config local
