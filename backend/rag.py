@@ -23,8 +23,8 @@ from tenacity import (
     wait_exponential,
 )
 
-from backend.config import settings
-from backend.store import get_retriever
+from config import settings
+from store import get_retriever
 
 logger = logging.getLogger(__name__)
 

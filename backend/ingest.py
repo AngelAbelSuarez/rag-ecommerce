@@ -15,8 +15,8 @@ from pathlib import Path
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from backend.config import settings
-from backend.store import get_vectorstore
+from config import settings
+from store import get_vectorstore
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -104,9 +104,9 @@ def split_documents(docs: list[Document]) -> list[Document]:
 
 def ingest() -> tuple[int, int]:
     """Run the full ingestion pipeline and return (file_count, chunk_count)."""
-    docs_dir = Path(settings.documents_dir)
+    docs_dir = settings.documents_path
     if not docs_dir.is_dir():
-        logger.error("Documents directory not found: %s", docs_dir.resolve())
+        logger.error("Documents directory not found: %s", docs_dir)
         raise SystemExit(1)
 
     pdf_paths = sorted(docs_dir.glob("*.pdf"))
@@ -149,7 +149,7 @@ def ingest() -> tuple[int, int]:
         "Ingestion complete: %d files, %d chunks persisted to %s",
         len(pdf_paths),
         len(all_chunks),
-        settings.chroma_persist_dir,
+        settings.chroma_path,
     )
     return len(pdf_paths), len(all_chunks)
 

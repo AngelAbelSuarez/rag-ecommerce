@@ -19,9 +19,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from backend.config import settings
-from backend.rag import stream_answer
-from backend.store import get_vectorstore
+from config import settings
+from rag import stream_answer
+from store import get_vectorstore
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ def _collection_has_data() -> bool:
 
 def _auto_ingest() -> tuple[int, int] | None:
     """Run the offline ingestion pipeline if ChromaDB is empty."""
-    from backend import ingest
+    from ingest import ingest as _ingest
 
     if _collection_has_data():
         logger.info("ChromaDB already contains data; skipping auto-ingestion")
@@ -65,7 +65,7 @@ def _auto_ingest() -> tuple[int, int] | None:
 
     logger.info("ChromaDB is empty; running auto-ingestion")
     try:
-        return ingest.ingest()
+        return _ingest()
     except SystemExit as exc:
         # ingest.py raises SystemExit on fatal config/data errors.
         logger.error("Auto-ingestion failed with exit code %s", exc.code)
@@ -200,7 +200,7 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(
-        "backend.app:app",
+        "app:app",
         host="0.0.0.0",
         port=8000,
         reload=True,

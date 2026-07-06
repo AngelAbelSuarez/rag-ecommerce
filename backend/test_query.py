@@ -13,9 +13,9 @@ import logging
 import sys
 import textwrap
 
-from backend.config import settings
-from backend.rag import stream_answer
-from backend.store import get_vectorstore
+from config import settings
+from rag import stream_answer
+from store import get_vectorstore
 
 logger = logging.getLogger(__name__)
 

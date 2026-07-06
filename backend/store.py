@@ -1,32 +1,64 @@
-"""ChromaDB vector store client and retriever factory for the RAG pipeline."""
+"""ChromaDB vector store client and retriever factory for the RAG pipeline.
+
+Uses a direct OpenAI client (not LangChain's OpenAIEmbeddings) to work around
+compatibility issues between LangChain's token-based batching and OpenRouter's
+embedding API.
+"""
 
 import logging
+from typing import Any
 
 from langchain_chroma import Chroma
-from langchain_openai import OpenAIEmbeddings
+from langchain_core.embeddings import Embeddings
+from openai import OpenAI
 
-from backend.config import settings
+from config import settings
 
 logger = logging.getLogger(__name__)
 
 
-def get_embeddings() -> OpenAIEmbeddings:
-    """Return an OpenAI-compatible embedding client pointing at OpenRouter."""
+class OpenRouterEmbeddings(Embeddings):
+    """LangChain-compatible embeddings wrapper around the raw OpenAI client.
+
+    Sends plain text (not token IDs) so that OpenRouter's free embedding
+    models work correctly.
+    """
+
+    def __init__(self, **kwargs: Any) -> None:
+        self.client = OpenAI(
+            api_key=settings.openrouter_api_key,
+            base_url=settings.openrouter_base_url,
+            **kwargs,
+        )
+        self.model = settings.embedding_model
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        """Embed a list of documents."""
+        response = self.client.embeddings.create(
+            model=self.model, input=texts, encoding_format="float"
+        )
+        return [item.embedding for item in response.data]
+
+    def embed_query(self, text: str) -> list[float]:
+        """Embed a single query string."""
+        response = self.client.embeddings.create(
+            model=self.model, input=[text], encoding_format="float"
+        )
+        return response.data[0].embedding
+
+
+def get_embeddings() -> OpenRouterEmbeddings:
+    """Return an OpenRouter-compatible embedding instance."""
     if not settings.openrouter_api_key:
         raise RuntimeError("OPENROUTER_API_KEY not set")
-
-    return OpenAIEmbeddings(
-        model=settings.embedding_model,
-        openai_api_base=settings.openrouter_base_url,
-        openai_api_key=settings.openrouter_api_key,
-    )
+    return OpenRouterEmbeddings()
 
 
 def get_vectorstore() -> Chroma:
     """Return the persistent ChromaDB vector store for the configured collection."""
     embeddings = get_embeddings()
     return Chroma(
-        persist_directory=settings.chroma_persist_dir,
+        persist_directory=str(settings.chroma_path),
         collection_name=settings.collection_name,
         embedding_function=embeddings,
     )
