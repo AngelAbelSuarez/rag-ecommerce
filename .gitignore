@@ -2,6 +2,7 @@
 .agents/
 .atl/
 skills-lock.json
+openspec
 
 # Entorno y config local
 .env
@@ -32,3 +33,4 @@ frontend/dist/
 # OS
 Thumbs.db
 .DS_Store
+
