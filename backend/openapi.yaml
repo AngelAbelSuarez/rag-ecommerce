@@ -1,0 +1,209 @@
+openapi: "3.1.0"
+info:
+  title: BimBam Chatbot API
+  description: |
+    API REST del asistente virtual de BimBam Buy, un e-commerce LATAM.
+
+    El backend utiliza un pipeline RAG (Retrieval-Augmented Generation) con:
+      - ChromaDB como vector store local
+      - NVIDIA AI Endpoints para embeddings y generación de texto
+      - LangChain para orquestar la cadena de recuperación + generación
+      - Server-Sent Events (SSE) para streaming de respuestas
+
+    ## Uso básico
+
+    1. Verificar estado: `GET /api/health`
+    2. Enviar consulta: `POST /api/chat` con `{ "message": "..." }`
+    3. Recibir respuesta en vivo por SSE
+
+    La documentación interactiva también está disponible en `/docs`.
+  version: "0.2.0"
+servers:
+  - url: http://localhost:8000
+    description: Desarrollo local
+paths:
+  /api/health:
+    get:
+      operationId: checkHealth
+      summary: Verificar estado del servicio
+      description: |
+        Devuelve el estado actual de ChromaDB y el proveedor LLM.
+
+        - **200**: Todo funcionando correctamente.
+        - **503**: Algún componente está degradado o desconectado.
+      responses:
+        "200":
+          description: Servicio saludable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: healthy
+                chromadb: connected
+                llm: available
+        "503":
+          description: Servicio degradado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    $ref: "#/components/schemas/HealthResponse"
+              example:
+                detail:
+                  status: degraded
+                  chromadb: disconnected
+                  llm: unavailable
+
+  /api/chat:
+    post:
+      operationId: chatStream
+      summary: Enviar consulta al asistente
+      description: |
+        Envía una pregunta en español y recibe la respuesta del asistente
+        via **Server-Sent Events (SSE)**.
+
+        La respuesta se transmite token por token en tiempo real.
+        El streaming finaliza con un evento `data: [DONE]`.
+
+        En caso de error, se envía un evento `event: error` con un mensaje
+        descriptivo en español.
+
+        **Headers de la respuesta SSE:**
+        - `Cache-Control: no-cache`
+        - `Connection: keep-alive`
+        - `X-Accel-Buffering: no`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+            example:
+              message: "¿cuánto tarda un envío a Colombia?"
+              conversation_id: "abc-123"
+      responses:
+        "200":
+          description: |
+            Stream de tokens via SSE. Cada línea tiene el formato
+            `data: <token>` y finaliza con `data: [DONE]`.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: Stream de eventos SSE
+              example: |
+                data: El
+                data: plazo
+                data: de
+                data: entrega
+                data:  a
+                data:  Colombia
+                ...
+                data: [DONE]
+        "422":
+          description: Error de validación (mensaje vacío, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    description: Descripción del error
+              example:
+                detail: Backend misconfiguration: NVIDIA_API_KEY not set
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      description: Estado del servicio
+      properties:
+        status:
+          type: string
+          description: Estado general del servicio
+          enum:
+            - healthy
+            - degraded
+          example: healthy
+        chromadb:
+          type: string
+          description: Estado de conexión con ChromaDB
+          enum:
+            - connected
+            - disconnected
+          example: connected
+        llm:
+          type: string
+          nullable: true
+          description: Disponibilidad del proveedor LLM
+          enum:
+            - available
+            - unavailable
+          example: available
+      required:
+        - status
+        - chromadb
+
+    ChatRequest:
+      type: object
+      description: Consulta del usuario al asistente
+      properties:
+        message:
+          type: string
+          description: Pregunta del usuario en español (mín. 1 carácter)
+          minLength: 1
+          example: "¿cuál es la política de reembolsos?"
+        conversation_id:
+          type: string
+          description: Identificador de conversación del lado del cliente (reservado)
+          nullable: true
+          example: "abc-123"
+      required:
+        - message
+
+    SSEError:
+      type: object
+      description: Evento de error enviado por SSE
+      properties:
+        message:
+          type: string
+          description: Mensaje de error en español
+          example: "El servicio está congestionado, intentá de nuevo en unos segundos"
+
+    ValidationError:
+      type: object
+      description: Error de validación de entrada
+      properties:
+        detail:
+          type: array
+          items:
+            type: object
+            properties:
+              loc:
+                type: array
+                items:
+                  type: string
+                description: Ubicación del error
+              msg:
+                type: string
+                description: Descripción del error
+              type:
+                type: string
+                description: Tipo de error
+      example:
+        detail:
+          - loc:
+              - body
+              - message
+            msg: String should have at least 1 character
+            type: string_too_short
