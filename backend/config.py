@@ -21,18 +21,18 @@ class Settings(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_BACKEND_DIR / ".env",
         env_file_encoding="utf-8",
         extra="ignore",
     )
 
-    # OpenRouter
-    openrouter_api_key: str = ""
-    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    # NVIDIA hosted API (OpenAI-compatible)
+    nvidia_api_key: str = ""
+    nvidia_base_url: str = "https://integrate.api.nvidia.com/v1"
 
     # Models
-    embedding_model: str = "llama-nemotron-embed-vl-1b-v2:free"
-    chat_model: str = "nvidia/nemotron-3-ultra-550b-a55b:free"
+    embedding_model: str = "nvidia/nv-embed-v1"
+    chat_model: str = "nvidia/llama-3.1-nemotron-nano-vl-8b-v1"
 
     # Vector store (relative to backend/)
     chroma_persist_dir: str = "chroma_db"

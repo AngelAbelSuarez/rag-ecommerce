@@ -1,7 +1,8 @@
 """Offline document ingestion pipeline.
 
 Reads PDFs from ``documents/``, splits them into chunks, generates embeddings
-via OpenRouter, and persists the result to a local ChromaDB collection.
+via NVIDIA's hosted OpenAI-compatible API, and persists the result to a local
+ChromaDB collection.
 
 Usage:
     python backend/ingest.py
@@ -155,8 +156,8 @@ def ingest() -> tuple[int, int]:
 
 
 def main() -> None:
-    if not settings.openrouter_api_key:
-        logger.error("OPENROUTER_API_KEY not set")
+    if not settings.nvidia_api_key:
+        logger.error("NVIDIA_API_KEY not set")
         sys.exit(1)
 
     start = time.perf_counter()

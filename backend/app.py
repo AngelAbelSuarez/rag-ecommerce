@@ -108,7 +108,7 @@ app.add_middleware(
 async def health() -> HealthResponse:
     """Return the health status of ChromaDB and the LLM provider."""
     chromadb_status = "connected"
-    llm_status = "available" if settings.openrouter_api_key else "unavailable"
+    llm_status = "available" if settings.nvidia_api_key else "unavailable"
 
     try:
         vectorstore = get_vectorstore()
@@ -172,11 +172,11 @@ async def _stream_response(question: str) -> AsyncIterator[str]:
 @app.post("/api/chat")
 async def chat(request: Request, body: ChatRequest) -> StreamingResponse:
     """Stream a RAG-generated answer via SSE."""
-    if not settings.openrouter_api_key:
-        logger.error("OPENROUTER_API_KEY not set; refusing /api/chat request")
+    if not settings.nvidia_api_key:
+        logger.error("NVIDIA_API_KEY not set; refusing /api/chat request")
         raise HTTPException(
             status_code=500,
-            detail="Backend misconfiguration: OPENROUTER_API_KEY not set",
+            detail="Backend misconfiguration: NVIDIA_API_KEY not set",
         )
 
     logger.info(

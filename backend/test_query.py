@@ -106,9 +106,9 @@ def main() -> int:
         format="%(levelname)s: %(message)s",
     )
 
-    if not settings.openrouter_api_key:
+    if not settings.nvidia_api_key:
         print(
-            "ERROR: OPENROUTER_API_KEY no está configurada.",
+            "ERROR: NVIDIA_API_KEY no está configurada.",
             file=sys.stderr,
         )
         return 1

@@ -2,7 +2,7 @@
 
 Builds a LangChain LCEL pipeline that retrieves relevant chunks from ChromaDB,
 contextualises them in a Spanish LATAM prompt, and streams tokens from
-OpenRouter's chat model with bounded retry logic for rate limits.
+NVIDIA's hosted chat API with bounded retry logic for rate limits.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnableSerializable
-from langchain_openai import ChatOpenAI
+from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from tenacity import (
     AsyncRetrying,
     retry_if_exception_type,
@@ -78,14 +78,12 @@ def build_chain() -> RunnableSerializable[dict[str, Any], str]:
     The chain expects a dict with at least a ``question`` key.  It returns a
     string because StrOutputParser strips the AIMessage wrapper.
     """
-    llm = ChatOpenAI(
+    llm = ChatNVIDIA(
         model=settings.chat_model,
-        openai_api_base=settings.openrouter_base_url,
-        openai_api_key=settings.openrouter_api_key,
+        api_key=settings.nvidia_api_key,
+        base_url=settings.nvidia_base_url,
         temperature=0.3,
-        streaming=True,
         timeout=settings.request_timeout,
-        max_retries=0,  # retries are handled explicitly with tenacity
     )
 
     prompt = ChatPromptTemplate.from_messages(
@@ -122,9 +120,9 @@ async def stream_answer(
     """
     del history  # reserved for future session support
 
-    if not settings.openrouter_api_key:
-        logger.error("OPENROUTER_API_KEY not set")
-        raise RuntimeError("Backend misconfiguration: OPENROUTER_API_KEY not set")
+    if not settings.nvidia_api_key:
+        logger.error("NVIDIA_API_KEY not set")
+        raise RuntimeError("Backend misconfiguration: NVIDIA_API_KEY not set")
 
     chain = build_chain()
 
@@ -144,16 +142,16 @@ async def stream_answer(
                     yield NO_CONTEXT_ANSWER
                 return
             except Exception as exc:
-                # Surface transient OpenRouter rate-limit-like failures for retry.
+                # Surface transient NVIDIA API rate-limit-like failures for retry.
                 # Other errors are propagated as-is so the API can map them.
                 error_message = str(exc).lower()
                 if "429" in error_message or "rate limit" in error_message:
                     logger.warning(
-                        "OpenRouter rate limit hit for query '%s': %s",
+                        "NVIDIA API rate limit for query '%s': %s",
                         question,
                         exc,
                     )
-                    raise RuntimeError(f"OpenRouter rate limit: {exc}") from exc
+                    raise RuntimeError(f"NVIDIA API rate limit: {exc}") from exc
                 logger.exception("LLM generation failed for query '%s'", question)
                 raise
 

@@ -1,0 +1,35 @@
+version: 2.1
+
+jobs:
+  backend-tests:
+    docker:
+      - image: python:3.13
+    steps:
+      - checkout
+      - run:
+          name: Install backend dependencies
+          command: pip install -r backend/requirements.txt
+      - run:
+          name: Run backend tests
+          command: pytest backend/tests/
+
+  frontend-tests:
+    docker:
+      - image: node:22
+    steps:
+      - checkout
+      - run:
+          name: Install frontend dependencies
+          command: cd frontend && corepack enable && pnpm install --frozen-lockfile
+      - run:
+          name: Build frontend
+          command: cd frontend && pnpm run build
+      - run:
+          name: Run frontend tests
+          command: cd frontend && pnpm test
+
+workflows:
+  test-and-build:
+    jobs:
+      - backend-tests
+      - frontend-tests
