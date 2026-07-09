@@ -10,8 +10,16 @@ jobs:
           name: Install backend dependencies
           command: pip install -r backend/requirements.txt
       - run:
-          name: Run backend tests
-          command: pytest backend/tests/
+          name: Run backend tests with coverage
+          command: |
+            cd backend
+            pytest tests/ --cov=. --cov-report=term-missing --cov-report=xml
+      - run:
+          name: Upload coverage to Coveralls
+          command: coveralls
+          environment:
+            COVERALLS_REPO_TOKEN: 9aqVrWJxpqGE7opwjnaQt1h3MfUSoFZDt
+            COVERALLS_SERVICE_NAME: circle-ci
 
   frontend-tests:
     docker:
