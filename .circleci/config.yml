@@ -10,16 +10,11 @@ jobs:
           name: Install backend dependencies
           command: pip install -r backend/requirements.txt
       - run:
-          name: Run backend tests with coverage
+          name: Backend tests + Coveralls
           command: |
             cd backend
             pytest tests/ --cov=. --cov-report=term-missing --cov-report=xml
-      - run:
-          name: Upload coverage to Coveralls
-          command: coveralls
-          environment:
-            COVERALLS_REPO_TOKEN: 9aqVrWJxpqGE7opwjnaQt1h3MfUSoFZDt
-            COVERALLS_SERVICE_NAME: circle-ci
+            coveralls
 
   frontend-tests:
     docker:
@@ -28,7 +23,7 @@ jobs:
       - checkout
       - run:
           name: Install frontend dependencies
-          command: cd frontend && corepack enable && pnpm install --frozen-lockfile
+          command: cd frontend && corepack enable && pnpm install --frozen-lockfile --config.ignore-scripts=false
       - run:
           name: Build frontend
           command: cd frontend && pnpm run build
