@@ -28,7 +28,7 @@ jobs:
       - checkout
       - run:
           name: Install frontend dependencies
-          command: cd frontend && corepack enable && pnpm install --frozen-lockfile
+          command: cd frontend && corepack enable && pnpm install --frozen-lockfile --config.ignore-scripts=false
       - run:
           name: Build frontend
           command: cd frontend && pnpm run build

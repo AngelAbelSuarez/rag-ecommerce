@@ -1,5 +1,6 @@
 
 # BimBam Chatbot — Manual Verification Guide
+[![CircleCI](https://dl.circleci.com/status-badge/img/circleci/8Vocs9Wi1dzq3hdj7Xm8N6/RoSAjBDZEeShem5ytogQa1/tree/main.svg?style=svg&circle-token=CCIPRJ_GT7EbpS66vSLw7o6dm8Xfw_70612efa8db1cb19cafab350fede68778a9b7c4f)](https://dl.circleci.com/status-badge/redirect/circleci/8Vocs9Wi1dzq3hdj7Xm8N6/RoSAjBDZEeShem5ytogQa1/tree/main)
 
 This document describes how to set up, ingest data, run, and verify the BimBam Chatbot stack end-to-end.
 
