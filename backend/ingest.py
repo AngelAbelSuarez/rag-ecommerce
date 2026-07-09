@@ -1,12 +1,3 @@
-"""Offline document ingestion pipeline.
-
-Reads PDFs from ``documents/``, splits them into chunks, generates embeddings
-via NVIDIA's hosted OpenAI-compatible API, and persists the result to a local
-ChromaDB collection.
-
-Usage:
-    python backend/ingest.py
-"""
 
 import logging
 import sys
@@ -27,7 +18,7 @@ logging.basicConfig(
 
 
 def _extract_with_pypdf(path: Path) -> list[Document]:
-    """Extract pages using pypdf with strict=False for relaxed LATAM PDFs."""
+
     from pypdf import PdfReader
 
     reader = PdfReader(str(path), strict=False)
@@ -44,7 +35,7 @@ def _extract_with_pypdf(path: Path) -> list[Document]:
 
 
 def _extract_with_pdfplumber(path: Path) -> list[Document]:
-    """Fallback extraction using pdfplumber (better for some LATAM encodings)."""
+
     import pdfplumber
 
     docs: list[Document] = []
@@ -61,12 +52,7 @@ def _extract_with_pdfplumber(path: Path) -> list[Document]:
 
 
 def load_pdf(path: Path) -> list[Document]:
-    """Load a PDF, normalizing metadata and preserving LATAM characters.
 
-    Tries pypdf first and falls back to pdfplumber if pypdf cannot read the
-    file. Corrupt or unreadable files raise an exception with a descriptive
-    message so the caller can log and continue with the remaining PDFs.
-    """
     try:
         docs = _extract_with_pypdf(path)
     except Exception as exc:
@@ -78,7 +64,6 @@ def load_pdf(path: Path) -> list[Document]:
                 f"Could not read {path.name}: {fallback_exc}"
             ) from fallback_exc
 
-    # Defensive normalization: ensure every document carries source/page.
     for doc in docs:
         doc.metadata["source"] = path.name
         page = doc.metadata.get("page")
@@ -86,14 +71,14 @@ def load_pdf(path: Path) -> list[Document]:
             page = doc.metadata.get("page_number", 1)
         try:
             doc.metadata["page"] = int(page)
-        except (TypeError, Value):
+        except (TypeError, ValueError):
             doc.metadata["page"] = 1
 
     return docs
 
 
 def split_documents(docs: list[Document]) -> list[Document]:
-    """Split documents into overlapping chunks using the configured size."""
+
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=settings.chunk_size,
         chunk_overlap=settings.chunk_overlap,
@@ -104,7 +89,7 @@ def split_documents(docs: list[Document]) -> list[Document]:
 
 
 def ingest() -> tuple[int, int]:
-    """Run the full ingestion pipeline and return (file_count, chunk_count)."""
+
     docs_dir = settings.documents_path
     if not docs_dir.is_dir():
         logger.error("Documents directory not found: %s", docs_dir)
@@ -136,7 +121,6 @@ def ingest() -> tuple[int, int]:
     logger.info("Embedding %d chunks into ChromaDB...", len(all_chunks))
     vectorstore = get_vectorstore()
 
-    # Idempotency: drop the existing collection before re-inserting.
     try:
         vectorstore.delete_collection()
         logger.info("Replaced existing collection '%s'", settings.collection_name)

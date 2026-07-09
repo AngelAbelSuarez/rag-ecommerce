@@ -1,9 +1,3 @@
-"""FastAPI runtime for the BimBam chatbot.
-
-Exposes a health endpoint and a streaming chat endpoint backed by the RAG
-chain.  If ChromaDB is empty at startup, the offline ingestion pipeline is run
-automatically so the first query can succeed.
-"""
 
 from __future__ import annotations
 
@@ -27,7 +21,6 @@ logger = logging.getLogger(__name__)
 
 
 class ChatRequest(BaseModel):
-    """Body for POST /api/chat."""
 
     message: str = Field(..., min_length=1, description="User question")
     conversation_id: str | None = Field(
@@ -37,7 +30,6 @@ class ChatRequest(BaseModel):
 
 
 class HealthResponse(BaseModel):
-    """Response model for GET /api/health."""
 
     status: str
     chromadb: str
@@ -45,7 +37,7 @@ class HealthResponse(BaseModel):
 
 
 def _collection_has_data() -> bool:
-    """Return True if the ChromaDB collection contains at least one document."""
+
     try:
         vectorstore = get_vectorstore()
         count = vectorstore._collection.count()
@@ -56,7 +48,7 @@ def _collection_has_data() -> bool:
 
 
 def _auto_ingest() -> tuple[int, int] | None:
-    """Run the offline ingestion pipeline if ChromaDB is empty."""
+
     from ingest import ingest as _ingest
 
     if _collection_has_data():
@@ -67,20 +59,18 @@ def _auto_ingest() -> tuple[int, int] | None:
     try:
         return _ingest()
     except SystemExit as exc:
-        # ingest.py raises SystemExit on fatal config/data errors.
         logger.error("Auto-ingestion failed with exit code %s", exc.code)
         return None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # noqa: ARG001
-    """Application lifespan: configure logging and ingest data if needed."""
+
     logging.basicConfig(
         level=settings.log_level.upper(),
         format="%(levelname)s: %(message)s",
     )
 
-    # Run ingestion in a thread so the event loop is not blocked by pdf parsing.
     loop = asyncio.get_running_loop()
     await loop.run_in_executor(None, _auto_ingest)
 
@@ -94,7 +84,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Open CORS for local development.  Tighten origins before production.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -106,7 +95,7 @@ app.add_middleware(
 
 @app.get("/api/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
-    """Return the health status of ChromaDB and the LLM provider."""
+
     chromadb_status = "connected"
     llm_status = "available" if settings.nvidia_api_key else "unavailable"
 
@@ -138,7 +127,7 @@ async def health() -> HealthResponse:
 
 
 def _sse_event(payload: str, event_name: str | None = None) -> str:
-    """Format a single SSE frame."""
+
     lines = []
     if event_name:
         lines.append(f"event: {event_name}")
@@ -150,7 +139,7 @@ def _sse_event(payload: str, event_name: str | None = None) -> str:
 
 
 async def _stream_response(question: str) -> AsyncIterator[str]:
-    """Yield SSE frames for a RAG answer."""
+
     try:
         async for token in stream_answer(question):
             yield _sse_event(token)
@@ -171,7 +160,7 @@ async def _stream_response(question: str) -> AsyncIterator[str]:
 
 @app.post("/api/chat")
 async def chat(request: Request, body: ChatRequest) -> StreamingResponse:
-    """Stream a RAG-generated answer via SSE."""
+
     if not settings.nvidia_api_key:
         logger.error("NVIDIA_API_KEY not set; refusing /api/chat request")
         raise HTTPException(

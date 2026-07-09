@@ -1,9 +1,3 @@
-"""Interactive CLI to test the BimBam RAG pipeline.
-
-Usage:
-    python backend/test_query.py "¿cuánto tarda un envío a Colombia?"
-    python backend/test_query.py -i
-"""
 
 from __future__ import annotations
 
@@ -21,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def _collection_has_data() -> bool:
-    """Return True if ChromaDB already contains ingested documents."""
+
     try:
         vectorstore = get_vectorstore()
         return vectorstore._collection.count() > 0
@@ -31,7 +25,7 @@ def _collection_has_data() -> bool:
 
 
 def _ensure_ingested() -> None:
-    """Run ingestion if the vector store is empty."""
+
     if _collection_has_data():
         return
 
@@ -47,7 +41,7 @@ def _ensure_ingested() -> None:
 
 
 async def _run_query(question: str) -> str:
-    """Run a single query and return the complete answer."""
+
     answer_parts: list[str] = []
     async for token in stream_answer(question):
         answer_parts.append(token)
@@ -55,7 +49,7 @@ async def _run_query(question: str) -> str:
 
 
 def _print_answer(question: str, answer: str) -> None:
-    """Pretty-print the question and the RAG answer."""
+
     print()
     print("=" * 60)
     print(f"Pregunta: {question}")
@@ -66,7 +60,7 @@ def _print_answer(question: str, answer: str) -> None:
 
 
 async def _interactive_mode() -> None:
-    """Read questions from stdin until the user exits."""
+
     print("BimBam RAG Tester — escribí tu pregunta o 'salir' para terminar.")
     while True:
         try:
@@ -84,7 +78,7 @@ async def _interactive_mode() -> None:
 
 
 def main() -> int:
-    """CLI entry point."""
+
     parser = argparse.ArgumentParser(
         description="Test the BimBam chatbot RAG pipeline."
     )

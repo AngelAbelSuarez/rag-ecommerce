@@ -1,9 +1,3 @@
-"""RAG chain for the BimBam chatbot.
-
-Builds a LangChain LCEL pipeline that retrieves relevant chunks from ChromaDB,
-contextualises them in a Spanish LATAM prompt, and streams tokens from
-NVIDIA's hosted chat API with bounded retry logic for rate limits.
-"""
 
 from __future__ import annotations
 
@@ -46,7 +40,7 @@ MAX_RETRIES = 3
 
 
 def _format_context(docs: list[Document]) -> str:
-    """Build a single context string from retrieved chunks."""
+
     if not docs:
         return ""
 
@@ -59,7 +53,7 @@ def _format_context(docs: list[Document]) -> str:
 
 
 def _retrieve_and_format(inputs: dict[str, Any]) -> dict[str, str]:
-    """Retrieve chunks for the question and build the prompt variables."""
+
     question = inputs["question"]
     retriever = get_retriever(
         k=settings.retriever_k,
@@ -73,11 +67,7 @@ def _retrieve_and_format(inputs: dict[str, Any]) -> dict[str, str]:
 
 
 def build_chain() -> RunnableSerializable[dict[str, Any], str]:
-    """Return the LCEL RAG chain (retriever -> prompt -> LLM -> parser).
 
-    The chain expects a dict with at least a ``question`` key.  It returns a
-    string because StrOutputParser strips the AIMessage wrapper.
-    """
     llm = ChatNVIDIA(
         model=settings.chat_model,
         api_key=settings.nvidia_api_key,
@@ -103,21 +93,7 @@ async def stream_answer(
     question: str,
     history: list[tuple[str, str]] | None = None,
 ) -> AsyncIterator[str]:
-    """Stream the RAG answer token by token with retry on rate limits.
 
-    Args:
-        question: User question in Spanish.
-        history: Optional list of (role, content) tuples for the conversation.
-            Reserved for future session support; currently not forwarded to the
-            LLM because PR 2 does not persist conversation history.
-
-    Yields:
-        Token strings as they arrive from the LLM.
-
-    Raises:
-        RuntimeError: when the LLM keeps returning rate-limit errors after all
-            retry attempts are exhausted.
-    """
     del history  # reserved for future session support
 
     if not settings.nvidia_api_key:
@@ -142,8 +118,6 @@ async def stream_answer(
                     yield NO_CONTEXT_ANSWER
                 return
             except Exception as exc:
-                # Surface transient NVIDIA API rate-limit-like failures for retry.
-                # Other errors are propagated as-is so the API can map them.
                 error_message = str(exc).lower()
                 if "429" in error_message or "rate limit" in error_message:
                     logger.warning(
@@ -155,5 +129,4 @@ async def stream_answer(
                 logger.exception("LLM generation failed for query '%s'", question)
                 raise
 
-    # Defensive fallback: if the loop exits without yielding, be polite.
     yield NO_CONTEXT_ANSWER

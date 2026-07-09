@@ -1,4 +1,3 @@
-"""Tests for the PDF ingestion pipeline."""
 
 from pathlib import Path
 
@@ -10,7 +9,7 @@ from ingest import _extract_with_pypdf, load_pdf, split_documents
 
 
 def _make_pdf(path: Path, pages: list[str]) -> None:
-    """Create a minimal PDF with one page per text entry."""
+
     c = canvas.Canvas(str(path))
     for text in pages:
         if text:
@@ -21,7 +20,7 @@ def _make_pdf(path: Path, pages: list[str]) -> None:
 
 @pytest.fixture
 def sample_pdf(tmp_path: Path) -> Path:
-    """PDF with two non-empty pages."""
+
     path = tmp_path / "sample.pdf"
     _make_pdf(
         path,
@@ -35,14 +34,14 @@ def sample_pdf(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def empty_page_pdf(tmp_path: Path) -> Path:
-    """PDF with a single empty page."""
+
     path = tmp_path / "empty.pdf"
     _make_pdf(path, [""])
     return path
 
 
 def test_load_pdf_returns_documents_with_source(sample_pdf: Path):
-    """load_pdf returns Documents with source metadata."""
+
     docs = load_pdf(sample_pdf)
 
     assert isinstance(docs, list)
@@ -55,7 +54,7 @@ def test_load_pdf_returns_documents_with_source(sample_pdf: Path):
 
 
 def test_split_documents_chunks_smaller_than_chunk_size(monkeypatch):
-    """split_documents produces chunks that fit within the configured size."""
+
     monkeypatch.setattr("ingest.settings.chunk_size", 80)
     monkeypatch.setattr("ingest.settings.chunk_overlap", 10)
 
@@ -68,7 +67,7 @@ def test_split_documents_chunks_smaller_than_chunk_size(monkeypatch):
 
 
 def test_extract_with_pypdf_handles_empty_page(empty_page_pdf: Path):
-    """_extract_with_pypdf returns an empty Document for a blank page."""
+
     docs = _extract_with_pypdf(empty_page_pdf)
 
     assert isinstance(docs, list)
