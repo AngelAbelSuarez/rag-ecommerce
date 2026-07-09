@@ -21,6 +21,9 @@ sse-starlette>=2.1.0
 python-multipart>=0.0.12
 httpx>=0.27.0
 
+# Tests
+reportlab>=4.2.0
+
 # Coverage & CI
 pytest-cov>=6.0.0
 coveralls>=4.0.0
