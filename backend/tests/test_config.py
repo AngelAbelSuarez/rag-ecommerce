@@ -30,7 +30,7 @@ def test_documents_path_defaults_to_project_root_documents(monkeypatch):
     path = settings.documents_path
 
     assert path.name == "documents"
-    assert path.parent.name == "rag-ecommerce"
+    assert (path.parent / "backend").is_dir()
 
 
 def test_documents_path_uses_documents_dir():
