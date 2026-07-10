@@ -1,54 +1,54 @@
 # BimBam Chatbot — Frontend
 
-Cliente web del asistente virtual de BimBam Buy. Construido con **React 19**, **Vite**, **TypeScript** y **Tailwind CSS 4**.
+Web client for the BimBam Buy virtual assistant. Built with **React 19**, **Vite**, **TypeScript** and **Tailwind CSS 4**.
 
 ## Stack
 
-| Capa         | Tecnología                                |
-| ------------ | ----------------------------------------- |
-| Framework    | React 19                                  |
-| Build tool   | Vite 6                                    |
-| Lenguaje     | TypeScript 5.6                            |
-| Estilos      | Tailwind CSS 4                            |
-| Routing      | React Router 7                            |
-| Iconos       | Lucide React                              |
-| UI Kit       | Radix UI (`@radix-ui/react-slot`) + CVA   |
-| Testing      | Vitest + Testing Library                  |
+| Layer         | Technology                                |
+| ------------- | ----------------------------------------- |
+| Framework     | React 19                                  |
+| Build tool    | Vite 6                                    |
+| Language      | TypeScript 5.6                            |
+| Styling       | Tailwind CSS 4                            |
+| Routing       | React Router 7                            |
+| Icons         | Lucide React                              |
+| UI Kit        | Radix UI (`@radix-ui/react-slot`) + CVA   |
+| Testing       | Vitest + Testing Library                  |
 
-## Estructura
+## Structure
 
 ```
 frontend/
 ├── src/
 │   ├── main.tsx              # Entry point, BrowserRouter
 │   ├── App.tsx               # Routes (/ , /chat, *)
-│   ├── index.css             # Estilos globales + variables CSS
+│   ├── index.css             # Global styles + CSS variables
 │   ├── pages/
-│   │   ├── Landing.tsx       # Landing page con hero, features, CTA
-│   │   ├── Chat.tsx          # Página del chat
+│   │   ├── Landing.tsx       # Landing page with hero, features, CTA
+│   │   ├── Chat.tsx          # Chat page
 │   │   └── NotFound.tsx      # 404
 │   ├── components/
-│   │   ├── ChatLayout.tsx    # Layout principal del chat (sidebar + área)
-│   │   ├── ChatArea.tsx      # Área de mensajes + input
-│   │   ├── ChatInput.tsx     # Input de texto con envío
-│   │   ├── MessageBubble.tsx # Burbuja de mensaje individual
-│   │   ├── MessageList.tsx   # Lista scrollable de mensajes
-│   │   ├── Sidebar.tsx       # Sidebar de conversaciones
-│   │   ├── TopBar.tsx        # Barra superior con menú y título
-│   │   ├── Navbar.tsx        # Navbar de la landing
-│   │   ├── ThemeToggle.tsx   # Toggle dark/light mode
+│   │   ├── ChatLayout.tsx    # Main chat layout (sidebar + area)
+│   │   ├── ChatArea.tsx      # Message area + input
+│   │   ├── ChatInput.tsx     # Text input with send
+│   │   ├── MessageBubble.tsx # Individual message bubble
+│   │   ├── MessageList.tsx   # Scrollable message list
+│   │   ├── Sidebar.tsx       # Conversations sidebar
+│   │   ├── TopBar.tsx        # Top bar with menu and title
+│   │   ├── Navbar.tsx        # Landing navbar
+│   │   ├── ThemeToggle.tsx   # Dark/light mode toggle
 │   │   └── ui/
-│   │       └── button.tsx    # Componente Button (shadcn-style)
+│   │       └── button.tsx    # Button component (shadcn-style)
 │   ├── hooks/
-│   │   ├── useChat.ts        # Estado y lógica del chat
-│   │   ├── useTheme.ts       # Hook de tema dark/light
-│   │   └── __tests__/        # Tests de hooks
+│   │   ├── useChat.ts        # Chat state and logic
+│   │   ├── useTheme.ts       # Dark/light theme hook
+│   │   └── __tests__/        # Hook tests
 │   ├── lib/
-│   │   ├── api.ts            # Cliente HTTP (SSE, health check)
-│   │   ├── utils.ts          # Utilidades generales
-│   │   └── __tests__/        # Tests de utilidades
+│   │   ├── api.ts            # HTTP client (SSE, health check)
+│   │   ├── utils.ts          # General utilities
+│   │   └── __tests__/        # Utility tests
 │   └── types/
-│       └── chat.ts           # Tipos Message, Conversation, ChatState
+│       └── chat.ts           # Message, Conversation, ChatState types
 ├── index.html
 ├── vite.config.ts            # Proxy /api → localhost:8000
 ├── vitest.config.ts
@@ -57,40 +57,40 @@ frontend/
 └── package.json
 ```
 
-## Requisitos
+## Requirements
 
 - Node.js 22+
-- pnpm 11+ (recomendado) o npm
+- pnpm 11+ (recommended) or npm
 
 ## Setup
 
 ```bash
 cd frontend
 
-# Instalar dependencias
+# Install dependencies
 pnpm install
-# o: npm install
+# or: npm install
 ```
 
-## Uso
+## Usage
 
-### Desarrollo
+### Development
 
 ```bash
 pnpm dev
 # → http://localhost:5173
 ```
 
-El `vite.config.ts` tiene un proxy configurado: toda request a `/api` se redirige a `http://localhost:8000` (el backend). No hace falta CORS ni configurar URLs manualmente.
+The `vite.config.ts` has a proxy configured: all requests to `/api` are forwarded to `http://localhost:8000` (the backend). No CORS or manual URL configuration needed.
 
-### Build producción
+### Production build
 
 ```bash
 pnpm build
-# → Salida en frontend/dist/
+# → Output in frontend/dist/
 ```
 
-### Preview del build
+### Build preview
 
 ```bash
 pnpm preview
@@ -99,10 +99,10 @@ pnpm preview
 ## Tests
 
 ```bash
-# Todos los tests
+# All tests
 pnpm test
 
-# Modo watch
+# Watch mode
 pnpm test -- --watch
 ```
 
@@ -112,32 +112,32 @@ pnpm test -- --watch
 pnpm lint
 ```
 
-## Arquitectura
+## Architecture
 
-### Flujo de datos
+### Data flow
 
 ```
-Usuario → ChatInput → useChat.sendMessage()
+User → ChatInput → useChat.sendMessage()
                   ↓
            lib/api.ts → fetch POST /api/chat (SSE)
                   ↓
-           useChat recibe tokens → actualiza estado
+           useChat receives tokens → updates state
                   ↓
-           MessageList + MessageBubble renderizan
+           MessageList + MessageBubble render
 ```
 
-### Temas
+### Theme
 
-El frontend soporta **dark** y **light mode** vía variables CSS (`--bg-primary`, `--text-primary`, etc.) y un hook `useTheme` que persiste la preferencia en `localStorage`.
+The frontend supports **dark** and **light mode** via CSS variables (`--bg-primary`, `--text-primary`, etc.) and a `useTheme` hook that persists the preference in `localStorage`.
 
 ### Responsive
 
-- **Desktop**: sidebar fijo a la izquierda + área de chat.
-- **Mobile**: sidebar como overlay accionado desde la barra superior.
+- **Desktop**: fixed sidebar on the left + chat area.
+- **Mobile**: sidebar as an overlay triggered from the top bar.
 
 ## API Proxy
 
-El `vite.config.ts` redirige `/api/*` al backend:
+The `vite.config.ts` forwards `/api/*` to the backend:
 
 ```ts
 server: {
@@ -150,4 +150,4 @@ server: {
 }
 ```
 
-En producción, el proxy lo resuelve el reverse proxy (nginx, etc.) o servís el frontend desde el mismo dominio que el backend.
+In production, the proxy is handled by a reverse proxy (nginx, etc.) or by serving the frontend from the same domain as the backend.

@@ -1,41 +1,41 @@
 # BimBam Chatbot — Backend
 
-API REST con RAG (Retrieval-Augmented Generation) para el asistente virtual de BimBam Buy, un e-commerce LATAM. Construido con **FastAPI**, **LangChain** y **ChromaDB**, usando modelos de **NVIDIA AI Endpoints**.
+REST API with RAG (Retrieval-Augmented Generation) for the BimBam Buy virtual assistant, a LATAM e-commerce platform. Built with **FastAPI**, **LangChain** and **ChromaDB**, using **NVIDIA AI Endpoints** models.
 
 ## Stack
 
-| Capa           | Tecnología                                                      |
-| -------------- | --------------------------------------------------------------- |
-| Framework      | FastAPI + Uvicorn                                               |
-| RAG pipeline   | LangChain LCEL                                                  |
-| Vector store   | ChromaDB (persistente, local)                                   |
-| Embeddings     | `nvidia/nv-embed-v1` via NVIDIA AI Endpoints                    |
+| Layer          | Technology                                                       |
+| -------------- | ---------------------------------------------------------------- |
+| Framework      | FastAPI + Uvicorn                                                |
+| RAG pipeline   | LangChain LCEL                                                   |
+| Vector store   | ChromaDB (persistent, local)                                     |
+| Embeddings     | `nvidia/nv-embed-v1` via NVIDIA AI Endpoints                     |
 | LLM            | `nvidia/llama-3.1-nemotron-nano-vl-8b-v1` via NVIDIA AI Endpoints |
-| Extracción PDF | pypdf + pdfplumber (fallback)                                   |
+| PDF extraction | pypdf + pdfplumber (fallback)                                    |
 
-## Estructura
+## Structure
 
 ```
 backend/
 ├── app.py              # FastAPI app, endpoints, SSE streaming
-├── config.py           # Config centralizada vía pydantic-settings + .env
-├── ingest.py           # Pipeline de ingestión offline (PDF → chunks → ChromaDB)
-├── rag.py              # Cadena RAG (retrieval + prompt + LLM)
-├── store.py            # Cliente ChromaDB y factory de retrievers
-├── test_query.py       # CLI interactivo para probar queries
-├── requirements.txt    # Dependencias Python
-├── .env.example        # Template de configuración
-├── .env                # Config local (gitignored)
-├── chroma_db/          # Persistencia local de ChromaDB (gitignored)
+├── config.py           # Centralized config via pydantic-settings + .env
+├── ingest.py           # Offline ingestion pipeline (PDF → chunks → ChromaDB)
+├── rag.py              # RAG chain (retrieval + prompt + LLM)
+├── store.py            # ChromaDB client and retriever factory
+├── test_query.py       # Interactive CLI for testing queries
+├── requirements.txt    # Python dependencies
+├── .env.example        # Configuration template
+├── .env                # Local config (gitignored)
+├── chroma_db/          # Local ChromaDB persistence (gitignored)
 └── tests/
     ├── conftest.py
-    ├── test_app.py     # Tests de la API HTTP
-    ├── test_ingest.py  # Tests del pipeline de ingestión
-    ├── test_rag.py     # Tests de la cadena RAG
-    └── test_store.py   # Tests del vector store
+    ├── test_app.py     # HTTP API tests
+    ├── test_ingest.py  # Ingestion pipeline tests
+    ├── test_rag.py     # RAG chain tests
+    └── test_store.py   # Vector store tests
 ```
 
-## Requisitos
+## Requirements
 
 - Python 3.13+
 - NVIDIA API key ([build.nvidia.com](https://build.nvidia.com))
@@ -43,64 +43,53 @@ backend/
 ## Setup
 
 ```bash
-# 1. Crear entorno virtual
+# 1. Create virtual environment
 python -m venv .venv
-source .venv/bin/activate  # o .venv\Scripts\activate en Windows
+source .venv/bin/activate  # or .venv\Scripts\activate on Windows
 
-# 2. Instalar dependencias
+# 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Configurar variables de entorno
+# 3. Configure environment variables
 cp .env.example .env
-# Editar .env y agregar NVIDIA_API_KEY=nvapi-...
+# Edit .env and add NVIDIA_API_KEY=nvapi-...
 ```
 
-## Uso
+## Usage
 
-### Ingestión de documentos
+### Document ingestion
 
-Colocá los PDFs en `documents/` (raíz del proyecto) y ejecutá:
+Place PDFs in `documents/` (project root) and run:
 
 ```bash
 python backend/ingest.py
 ```
 
-Esto extrae el texto, lo divide en chunks, genera embeddings y los persiste en `backend/chroma_db/`.
+This extracts text, splits it into chunks, generates embeddings, and persists them to `backend/chroma_db/`.
 
-### Servidor API
+### API Server
 
 ```bash
 uvicorn app:app --reload --port 8000
 ```
 
-La API queda en `http://localhost:8000`.
+The API is available at `http://localhost:8000`.
 
-### Documentación interactiva
+### Interactive documentation
 
-FastAPI genera automáticamente:
+FastAPI automatically generates:
 
 - **Swagger UI**: http://localhost:8000/docs
 - **OpenAPI JSON**: http://localhost:8000/openapi.json
-- También podés consultar el archivo [`openapi.yaml`](openapi.yaml) en este directorio.
-
-### CLI de prueba
-
-```bash
-# Query única
-python backend/test_query.py "¿cuánto tarda un envío a Colombia?"
-
-# Modo interactivo
-python backend/test_query.py -i
-```
 
 ## Endpoints
 
 ### `GET /api/health`
 
-Devuelve el estado de ChromaDB y el LLM.
+Returns ChromaDB and LLM status.
 
 ```json
-// 200 — todo bien
+// 200 — all good
 { "status": "healthy", "chromadb": "connected", "llm": "available" }
 
 // 503 — degraded
@@ -112,51 +101,51 @@ Devuelve el estado de ChromaDB y el LLM.
 **Request:**
 
 ```json
-{ "message": "¿cuál es el plazo de entrega?", "conversation_id": "abc-123" }
+{ "message": "what is the delivery time?", "conversation_id": "abc-123" }
 ```
 
-**Response:** Server-Sent Events (SSE) con tokens del LLM en vivo.
+**Response:** Server-Sent Events (SSE) with live LLM tokens.
 
 ```
-data: El
-data: plazo
-data: de
-data: entrega
+data: The
+data: delivery
+data: time
+data: is
 ...
 data: [DONE]
 ```
 
-Si ocurre un error:
+On error:
 
 ```
 event: error
-data: {"message": "El servicio está congestionado, intentá de nuevo en unos segundos"}
+data: {"message": "The service is congested, please try again in a few seconds"}
 ```
 
 ## Tests
 
 ```bash
-# Todos los tests
+# All tests
 pytest tests/ -v
 
-# Por archivo
+# By file
 pytest tests/test_app.py -v
 pytest tests/test_rag.py -v
 ```
 
-## Configuración vía entorno
+## Environment configuration
 
-| Variable               | Default                                         | Descripción                        |
+| Variable               | Default                                         | Description                        |
 | ---------------------- | ----------------------------------------------- | ---------------------------------- |
-| `NVIDIA_API_KEY`       | `""`                                            | API key de NVIDIA (requerida)      |
-| `NVIDIA_BASE_URL`      | `https://integrate.api.nvidia.com/v1`           | Base URL del API de NVIDIA         |
-| `EMBEDDING_MODEL`      | `nvidia/nv-embed-v1`                            | Modelo de embeddings               |
-| `CHAT_MODEL`           | `nvidia/llama-3.1-nemotron-nano-vl-8b-v1`      | Modelo de chat                     |
-| `CHROMA_PERSIST_DIR`   | `chroma_db`                                     | Directorio de persistencia         |
-| `COLLECTION_NAME`      | `bimbam_docs`                                   | Nombre de la colección ChromaDB    |
-| `CHUNK_SIZE`           | `600`                                           | Tamaño de chunk para ingestión     |
-| `CHUNK_OVERLAP`        | `80`                                            | Superposición entre chunks         |
-| `RETRIEVER_K`          | `4`                                             | Cantidad de documentos a recuperar |
-| `SIMILARITY_THRESHOLD` | `0.0`                                           | Umbral de similaridad mínima       |
-| `LOG_LEVEL`            | `INFO`                                          | Nivel de log                       |
-| `REQUEST_TIMEOUT`      | `30.0`                                          | Timeout para llamadas a NVIDIA     |
+| `NVIDIA_API_KEY`       | `""`                                            | NVIDIA API key (required)          |
+| `NVIDIA_BASE_URL`      | `https://integrate.api.nvidia.com/v1`           | NVIDIA API base URL                |
+| `EMBEDDING_MODEL`      | `nvidia/nv-embed-v1`                            | Embedding model                    |
+| `CHAT_MODEL`           | `nvidia/llama-3.1-nemotron-nano-vl-8b-v1`      | Chat model                         |
+| `CHROMA_PERSIST_DIR`   | `chroma_db`                                     | Persistence directory              |
+| `COLLECTION_NAME`      | `bimbam_docs`                                   | ChromaDB collection name           |
+| `CHUNK_SIZE`           | `600`                                           | Chunk size for ingestion           |
+| `CHUNK_OVERLAP`        | `80`                                            | Overlap between chunks             |
+| `RETRIEVER_K`          | `4`                                             | Number of documents to retrieve    |
+| `SIMILARITY_THRESHOLD` | `0.0`                                           | Minimum similarity threshold       |
+| `LOG_LEVEL`            | `INFO`                                          | Log level                          |
+| `REQUEST_TIMEOUT`      | `30.0`                                          | Timeout for NVIDIA API calls       |
