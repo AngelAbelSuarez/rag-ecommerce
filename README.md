@@ -1,117 +1,108 @@
+# BimBam Chatbot
 
-# BimBam Chatbot — Manual Verification Guide
+## Description
+
+This project is a full-stack RAG (Retrieval-Augmented Generation) chatbot application built with FastAPI and React, developed as a solution for a backend challenge. It provides a conversational e-commerce assistant that answers questions about products, shipping, and policies by retrieving relevant context from product documentation using vector search and LLM-generated responses, all through a modern chat interface.
+
+Built with a modular architecture that separates ingestion, retrieval, generation, and presentation concerns. The backend uses LangChain for the RAG pipeline, ChromaDB as the vector store, and NVIDIA AI Endpoints for embeddings and LLM inference. The frontend is built with React, TypeScript, and Tailwind CSS. The entire stack is containerized with Docker and includes automated CI/CD pipelines via CircleCI with coverage reporting through Coveralls.
+
+## Badges
+
 [![CircleCI](https://dl.circleci.com/status-badge/img/circleci/8Vocs9Wi1dzq3hdj7Xm8N6/RoSAjBDZEeShem5ytogQa1/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/circleci/8Vocs9Wi1dzq3hdj7Xm8N6/RoSAjBDZEeShem5ytogQa1/tree/main)
 
 [![Coverage Status](https://coveralls.io/repos/github/AngelAbelSuarez/rag-ecommerce/badge.svg?branch=main)](https://coveralls.io/github/AngelAbelSuarez/rag-ecommerce?branch=main)
 
-This document describes how to set up, ingest data, run, and verify the BimBam Chatbot stack end-to-end.
+## Features
 
-## Prerequisites
+- Ingest PDF documents and index them into a vector store (ChromaDB)
+- Ask questions via REST API and get LLM-generated answers grounded in your documents
+- Streaming responses via Server-Sent Events (SSE) for real-time chat
+- Modern chat UI with desktop and mobile responsive layout
+- Health check endpoint to monitor ChromaDB and LLM availability
+- Configurable chunk size, overlap, retriever K, and similarity threshold
+- CLI tool for interactive query testing
+
+## Pre-Requisites
 
 - Python 3.13+
 - Node.js 22+
 - pnpm 11+ (`corepack enable pnpm` or `npm install -g pnpm`)
-- NVIDIA API key (set as `NVIDIA_API_KEY`)
+- Docker Desktop
+- NVIDIA API key ([build.nvidia.com](https://build.nvidia.com))
+- Ports free: 8000 (backend) and 5173 (frontend)
 
-## 1. Environment Setup
-
-Copy the example environment file and fill in your NVIDIA API key:
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` and set at least:
-
-```env
-NVIDIA_API_KEY=your_nvidia_api_key_here
-```
-
-## 2. Run Ingestion
-
-Place PDF documents under `documents/` and run the ingestion script:
+## How to run the APP
 
 ```bash
-python backend/ingest.py
+# permissions
+$ chmod 711 ./up_dev.sh
+
+# start app
+$ ./up_dev.sh
 ```
 
-This loads the PDFs, chunks them, embeds them, and persists the vector store under `chroma_data/`.
-
-## 3. Start the Backend
+## How to run the tests
 
 ```bash
-uvicorn backend.app:app --reload
+# permissions
+$ chmod 711 ./up_test.sh
+
+# start test
+$ ./up_test.sh
 ```
 
-The API will be available at `http://localhost:8000`.
+## Architecture decisions
 
-## 4. Start the Frontend
+- **FastAPI**: Async-first Python framework, ideal for I/O-bound RAG workloads and SSE streaming. Type validation via Pydantic out of the box.
+- **LangChain LCEL**: Declarative chain composition that makes the RAG pipeline easy to modify, test, and debug without custom orchestration code.
+- **ChromaDB**: Lightweight, persistent vector store that runs embedded — no external database needed for development or small-scale deployments.
+- **NVIDIA AI Endpoints**: No GPU required; embeddings and LLM inference are handled externally via API, keeping the backend slim.
+- **React + Vite + Tailwind**: Modern frontend stack with fast HMR, responsive design, and utility-first styling.
+- **Separated ingestion pipeline**: `ingest.py` is a standalone offline script — the API doesn't need write access to ChromaDB at runtime.
+- **Docker Compose**: Single command to spin up the full stack with hot-reload in development.
+- **CircleCI + Coveralls**: Automated testing and coverage visibility on every push.
 
-In a new terminal:
+## Route
 
-```bash
-cd frontend
-pnpm run dev
-```
+- Backend API: [http://localhost:8000](http://localhost:8000)
+- Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
+- Frontend: [http://localhost:5173](http://localhost:5173)
 
-The UI will be available at `http://localhost:5173`.
+## Env vars
 
-## 5. Run All Tests
+| Variable               | Default                                         | Description                        |
+|------------------------|-------------------------------------------------|------------------------------------|
+| `NVIDIA_API_KEY`       | `""`                                            | API key for NVIDIA AI Endpoints    |
+| `NVIDIA_BASE_URL`      | `https://integrate.api.nvidia.com/v1`           | Base URL for NVIDIA API            |
+| `EMBEDDING_MODEL`      | `nvidia/nv-embed-v1`                            | Model for embeddings               |
+| `CHAT_MODEL`           | `nvidia/llama-3.1-nemotron-nano-vl-8b-v1`      | Model for chat responses           |
+| `CHROMA_PERSIST_DIR`   | `chroma_db`                                     | Vector store persistence directory |
+| `COLLECTION_NAME`      | `bimbam_docs`                                   | ChromaDB collection name           |
+| `DOCUMENTS_DIR`        | `""` (defaults to `documents/`)                  | Directory with PDFs to ingest      |
+| `CHUNK_SIZE`           | `600`                                           | Characters per chunk               |
+| `CHUNK_OVERLAP`        | `80`                                            | Overlap between chunks             |
+| `RETRIEVER_K`          | `4`                                             | Documents retrieved per query      |
+| `SIMILARITY_THRESHOLD` | `0.0`                                           | Minimum similarity score           |
+| `REQUEST_TIMEOUT`      | `30.0`                                          | Timeout for NVIDIA API calls       |
 
-### Backend
+## Areas to improve
 
-```bash
-pytest backend/tests/ -v
-```
+- Add authentication and rate limiting for the chat endpoint.
+- Implement a feedback mechanism (thumbs up/down) to evaluate response quality.
+- Add support for multiple collections and document types (CSV, JSON, Markdown).
+- Cache frequent queries to reduce LLM calls and latency.
+- Monitor embedding and LLM costs per session.
+- Add E2E tests with Playwright or Cypress for the full chat flow.
 
-### Frontend
+## Techs
 
-```bash
-cd frontend
-pnpm test
-```
-
-## 6. Build and Lint
-
-### Frontend build
-
-```bash
-cd frontend
-pnpm run build
-```
-
-### Frontend lint
-
-```bash
-cd frontend
-pnpm run lint
-```
-
-## 7. Smoke Test
-
-With the backend running, verify the health endpoint:
-
-```bash
-curl http://localhost:8000/api/health
-```
-
-Expected response:
-
-```json
-{
-  "status": "ok",
-  "chromadb": "ok",
-  "llm": "ok"
-}
-```
-
-## 8. Responsive Smoke Test
-
-1. Open `http://localhost:5173` in a desktop browser.
-2. Confirm the landing page renders the hero, feature cards, stats, and CTA.
-3. Click the "Chat" CTA or navigate to `/chat`.
-4. Send a message and confirm the assistant streams a response.
-5. Open browser DevTools, toggle a mobile viewport (e.g., iPhone SE / 375px width), and confirm:
-   - The landing page stacks vertically without horizontal overflow.
-   - The chat sidebar becomes a slide-over menu accessible from the top bar.
-   - Messages remain readable and the input stays anchored at the bottom.
+- Python 3.13 + FastAPI
+- LangChain + LangChain-Chroma
+- ChromaDB
+- NVIDIA AI Endpoints
+- React + TypeScript + Vite
+- Tailwind CSS
+- Docker + Docker Compose
+- CircleCI + Coveralls
+- pytest + pytest-cov
+- Vitest + Testing Library
