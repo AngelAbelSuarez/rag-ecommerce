@@ -1,0 +1,33 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app          # hot-reload en desarrollo
+      - ./documents:/documents   # documentos para ingest
+      - chroma_data:/app/chroma_db
+    env_file: ./backend/.env
+    environment:
+      - DOCUMENTS_DIR=/documents
+    command: uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    image: node:24-alpine
+    ports:
+      - "5173:5173"
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules        # volumen anónimo para no pisar node_modules local
+    environment:
+      - VITE_PROXY_TARGET=http://backend:8000
+    command: >
+      sh -c "corepack enable &&
+             pnpm install --frozen-lockfile &&
+             pnpm dev --host 0.0.0.0"
+    depends_on:
+      - backend
+
+volumes:
+  chroma_data:
