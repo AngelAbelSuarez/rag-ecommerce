@@ -40,3 +40,6 @@ Thumbs.db
 
 .pnpm-store
 .pytest_cache
+
+.coveragerc
+.coverage
