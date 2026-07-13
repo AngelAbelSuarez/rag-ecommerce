@@ -5,7 +5,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function Navbar() {
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[var(--border-hex)] bg-white/80 backdrop-blur-md dark:bg-zinc-900/80">
+    <header className="sticky top-0 z-50 w-full border-b border-[var(--border-hex)] bg-[var(--bg-primary)]/80 backdrop-blur-md">
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link to="/" className="flex items-center gap-2 text-xl font-bold">
           <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent-hex)] text-white">
