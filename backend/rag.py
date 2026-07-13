@@ -2,13 +2,14 @@
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import AsyncIterator
 from typing import Any
 
 from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnableLambda, RunnableSerializable
+from langchain_core.runnables import RunnableBranch, RunnableLambda, RunnableSerializable
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from tenacity import (
     AsyncRetrying,
@@ -36,7 +37,31 @@ NO_CONTEXT_ANSWER = (
     "recibir asistencia personalizada."
 )
 
+GREETING_ANSWER = (
+    "¡Hola! Soy el asistente virtual de BimBam Buy. "
+    "Preguntame sobre envíos, garantías, reembolsos, métodos de pago "
+    "o cualquier otra duda sobre nuestros servicios. ¿En qué te puedo ayudar?"
+)
+
+_GREETING_PATTERNS = [
+    re.compile(r"^(hola|hello|hi|hey)\W*$", re.IGNORECASE),
+    re.compile(r"^(buenas?)\W*$", re.IGNORECASE),
+    re.compile(r"^buen\s*d[ií]a\W*$", re.IGNORECASE),
+    re.compile(r"^buenos?\s*d[ií]as?\W*$", re.IGNORECASE),
+    re.compile(r"^buenas?\s*(tardes|noches)\W*$", re.IGNORECASE),
+    re.compile(r"^qu[eé]\s*tal\W*$", re.IGNORECASE),
+    re.compile(r"^c[oó]mo\s+(est[aá]s?|est[aá]n|est[aá]|va|andan|te\s*va)\W*$", re.IGNORECASE),
+    re.compile(r"^c[oó]mo\s+te\s+llamas\W*$", re.IGNORECASE),
+    re.compile(r"^(good\s+(morning|afternoon|evening))\W*$", re.IGNORECASE),
+]
+
 MAX_RETRIES = 3
+
+
+def _is_greeting(text: str) -> bool:
+    """Check if the query is purely a greeting/social opener."""
+    stripped = text.strip().rstrip(".!?¡¿")
+    return any(p.match(stripped) for p in _GREETING_PATTERNS)
 
 
 def _format_context(docs: list[Document]) -> str:
@@ -52,7 +77,7 @@ def _format_context(docs: list[Document]) -> str:
     return "\n\n---\n\n".join(parts)
 
 
-def _retrieve_and_format(inputs: dict[str, Any]) -> dict[str, str]:
+def _retrieve_and_format(inputs: dict[str, Any]) -> dict[str, Any]:
 
     question = inputs["question"]
     retriever = get_retriever(
@@ -63,6 +88,7 @@ def _retrieve_and_format(inputs: dict[str, Any]) -> dict[str, str]:
     return {
         "question": question,
         "context": _format_context(docs),
+        "has_context": len(docs) > 0,
     }
 
 
@@ -86,7 +112,14 @@ def build_chain() -> RunnableSerializable[dict[str, Any], str]:
         ]
     )
 
-    return RunnableLambda(_retrieve_and_format) | prompt | llm | StrOutputParser()
+    retrieve = RunnableLambda(_retrieve_and_format)
+    generate = prompt | llm | StrOutputParser()
+    no_context = RunnableLambda(lambda _: NO_CONTEXT_ANSWER)
+
+    return retrieve | RunnableBranch(
+        (lambda x: not x["has_context"], no_context),
+        generate,
+    )
 
 
 async def stream_answer(
@@ -99,6 +132,11 @@ async def stream_answer(
     if not settings.nvidia_api_key:
         logger.error("NVIDIA_API_KEY not set")
         raise RuntimeError("Backend misconfiguration: NVIDIA_API_KEY not set")
+
+    if _is_greeting(question):
+        logger.info("Greeting detected for query '%s'; skipping RAG", question)
+        yield GREETING_ANSWER
+        return
 
     chain = build_chain()
 

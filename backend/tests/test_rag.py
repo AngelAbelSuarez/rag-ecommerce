@@ -8,9 +8,11 @@ from langchain_core.documents import Document
 from langchain_core.runnables import RunnableSerializable
 
 from rag import (
+    GREETING_ANSWER,
     NO_CONTEXT_ANSWER,
     SYSTEM_PROMPT,
     _format_context,
+    _is_greeting,
     _retrieve_and_format,
     build_chain,
     stream_answer,
@@ -58,6 +60,66 @@ def test_no_context_answer_is_fallback_string():
     assert isinstance(NO_CONTEXT_ANSWER, str)
     assert len(NO_CONTEXT_ANSWER) > 0
     assert "canales oficiales" in NO_CONTEXT_ANSWER
+
+
+def test_greeting_answer_is_string():
+    assert isinstance(GREETING_ANSWER, str)
+    assert len(GREETING_ANSWER) > 0
+    assert "BimBam Buy" in GREETING_ANSWER
+
+
+# ---------------------------------------------------------------------------
+# _is_greeting
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "hola",
+        "Hola",
+        "HOLA!",
+        "buenas",
+        "buen dia",
+        "buenos días",
+        "buenas tardes",
+        "buenas noches",
+        "hello",
+        "hi",
+        "hey",
+        "qué tal",
+        "que tal",
+        "como estas",
+        "cómo estás",
+        "cómo está",
+        "cómo están",
+        "cómo va",
+        "como te va",
+        "cómo andan",
+        "good morning",
+        "good afternoon",
+        "good evening",
+    ],
+)
+def test_is_greeting_returns_true(text):
+    assert _is_greeting(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "hola necesito ayuda con un envío",
+        "buenas, cómo hago una devolución",
+        "qué tal, consulta sobre garantía",
+        "cristianismo",
+        "cuáles son los métodos de pago",
+        "cómo trackear mi pedido",
+        "",
+        "   ",
+    ],
+)
+def test_is_greeting_returns_false(text):
+    assert not _is_greeting(text)
 
 
 # ---------------------------------------------------------------------------
@@ -184,6 +246,29 @@ def test_stream_answer_passes_on_non_429(fake_api_key, monkeypatch):
 
     with pytest.raises(ValueError, match="algo explotó"):
         asyncio.run(collect())
+
+
+def test_stream_answer_returns_greeting_for_hola(fake_api_key, monkeypatch):
+    """Saludo puro → GREETING_ANSWER sin invocar build_chain."""
+
+    chain_called = False
+
+    def _fake_build():
+        nonlocal chain_called
+        chain_called = True
+        return MagicMock()
+
+    monkeypatch.setattr("rag.build_chain", _fake_build)
+
+    async def collect():
+        tokens = []
+        async for token in stream_answer("hola"):
+            tokens.append(token)
+        return "".join(tokens)
+
+    result = asyncio.run(collect())
+    assert result == GREETING_ANSWER
+    assert not chain_called, "build_chain no debe invocarse para saludos"
 
 
 # ---------------------------------------------------------------------------
