@@ -1,7 +1,7 @@
 
 import logging
+import os
 
-from langchain_chroma import Chroma
 from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings
 
 from config import settings
@@ -21,20 +21,26 @@ def get_embeddings() -> NVIDIAEmbeddings:
     )
 
 
-def get_vectorstore() -> Chroma:
+def get_vectorstore():
+
+    if not settings.pinecone_api_key:
+        raise RuntimeError("PINECONE_API_KEY not set")
+    os.environ.setdefault("PINECONE_API_KEY", settings.pinecone_api_key)
 
     embeddings = get_embeddings()
-    return Chroma(
-        persist_directory=str(settings.chroma_path),
-        collection_name=settings.collection_name,
-        embedding_function=embeddings,
+    from langchain_pinecone import PineconeVectorStore
+
+    return PineconeVectorStore.from_existing_index(
+        index_name=settings.pinecone_index_name,
+        embedding=embeddings,
+        namespace=settings.pinecone_namespace,
     )
 
 
 def get_retriever(
     k: int | None = None,
     score_threshold: float | None = None,
-) -> Chroma:
+):
 
     vectorstore = get_vectorstore()
     search_kwargs: dict = {

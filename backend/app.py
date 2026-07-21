@@ -1,9 +1,9 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -11,11 +11,11 @@ from typing import Any
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from pinecone import Pinecone
 from pydantic import BaseModel, Field
 
 from config import settings
 from rag import stream_answer
-from store import get_vectorstore
 
 logger = logging.getLogger(__name__)
 
@@ -32,35 +32,8 @@ class ChatRequest(BaseModel):
 class HealthResponse(BaseModel):
 
     status: str
-    chromadb: str
+    vectorstore: str
     llm: str | None = None
-
-
-def _collection_has_data() -> bool:
-
-    try:
-        vectorstore = get_vectorstore()
-        count = vectorstore._collection.count()
-        return count > 0
-    except Exception as exc:
-        logger.warning("Could not determine ChromaDB document count: %s", exc)
-        return False
-
-
-def _auto_ingest() -> tuple[int, int] | None:
-
-    from ingest import ingest as _ingest
-
-    if _collection_has_data():
-        logger.info("ChromaDB already contains data; skipping auto-ingestion")
-        return None
-
-    logger.info("ChromaDB is empty; running auto-ingestion")
-    try:
-        return _ingest()
-    except SystemExit as exc:
-        logger.error("Auto-ingestion failed with exit code %s", exc.code)
-        return None
 
 
 @asynccontextmanager
@@ -70,9 +43,6 @@ async def lifespan(app: FastAPI):  # noqa: ARG001
         level=settings.log_level.upper(),
         format="%(levelname)s: %(message)s",
     )
-
-    loop = asyncio.get_running_loop()
-    await loop.run_in_executor(None, _auto_ingest)
 
     yield
 
@@ -96,28 +66,31 @@ app.add_middleware(
 @app.get("/api/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
 
-    chromadb_status = "connected"
+    vectorstore_status = "connected"
     llm_status = "available" if settings.nvidia_api_key else "unavailable"
 
     try:
-        vectorstore = get_vectorstore()
-        count = vectorstore._collection.count()
-        logger.debug("ChromaDB health check: %d documents", count)
+        os.environ.setdefault("PINECONE_API_KEY", settings.pinecone_api_key)
+        pc = Pinecone(api_key=settings.pinecone_api_key)
+        idx = pc.Index(settings.pinecone_index_name)
+        stats = idx.describe_index_stats()
+        count = sum(ns.vector_count for ns in stats.namespaces.values()) if stats.namespaces else 0
+        logger.debug("Pinecone health check: %d vectors", count)
     except Exception as exc:
-        logger.warning("ChromaDB health check failed: %s", exc)
-        chromadb_status = "disconnected"
+        logger.warning("vector store health check failed: %s", exc)
+        vectorstore_status = "disconnected"
 
-    status = "healthy" if chromadb_status == "connected" else "degraded"
+    status = "healthy" if vectorstore_status == "connected" else "degraded"
     if llm_status != "available":
         status = "degraded"
 
     response = HealthResponse(
         status=status,
-        chromadb=chromadb_status,
+        vectorstore=vectorstore_status,
         llm=llm_status,
     )
 
-    if chromadb_status == "connected" and llm_status == "available":
+    if vectorstore_status == "connected" and llm_status == "available":
         return response
 
     raise HTTPException(

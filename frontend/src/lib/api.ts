@@ -1,8 +1,8 @@
-const API_BASE = "/api";
+const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
 export interface HealthStatus {
   status: string;
-  chromadb: string;
+  vectorstore: string;
   llm: string | null;
 }
 

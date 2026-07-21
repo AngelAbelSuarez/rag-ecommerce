@@ -21,8 +21,9 @@ class Settings(BaseSettings):
     embedding_model: str = "nvidia/nv-embed-v1"
     chat_model: str = "nvidia/llama-3.1-nemotron-nano-vl-8b-v1"
 
-    chroma_persist_dir: str = "chroma_db"
-    collection_name: str = "bimbam_docs"
+    pinecone_api_key: str = ""
+    pinecone_index_name: str = "bimbam-docs"
+    pinecone_namespace: str = "bimbam_docs"
 
     documents_dir: str = ""
     chunk_size: int = 600
@@ -41,10 +42,7 @@ class Settings(BaseSettings):
             return Path(self.documents_dir)
         return _PROJECT_ROOT / "documents"
 
-    @property
-    def chroma_path(self) -> Path:
 
-        return _BACKEND_DIR / self.chroma_persist_dir
 
 
 settings = Settings()

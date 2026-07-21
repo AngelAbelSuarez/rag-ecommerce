@@ -24,7 +24,7 @@ describe("checkHealth", () => {
       json: () =>
         Promise.resolve({
           status: "ok",
-          chromadb: "ok",
+          vectorstore: "ok",
           llm: "ok",
         }),
     });
