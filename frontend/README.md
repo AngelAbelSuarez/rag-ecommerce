@@ -2,6 +2,8 @@
 
 Web client for the BimBam Buy virtual assistant. Built with **React 19**, **Vite**, **TypeScript** and **Tailwind CSS 4**.
 
+**Live demo:** [https://rag-ecommerce.vercel.app/](https://rag-ecommerce.vercel.app/)
+
 ## Stack
 
 | Layer         | Technology                                |
