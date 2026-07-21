@@ -103,14 +103,24 @@ $ ./up_test.sh
 
 ## Techs
 
-- Python 3.13 + FastAPI
-- LangChain + LangChain-Pinecone
-- Pinecone Serverless (vector store)
-- NVIDIA AI Endpoints
-- React + TypeScript + Vite
-- Tailwind CSS
-- Docker + Docker Compose
-- CircleCI + Coveralls
-- Vercel + Render (deployment)
-- pytest + pytest-cov
-- Vitest + Testing Library
+### Backend
+- **Python 3.13** + **FastAPI** (async REST + SSE streaming) + **Uvicorn**
+- **LangChain LCEL** + **LangChain-Pinecone** for the RAG pipeline
+- **Pinecone Serverless** (AWS us-east-1) as vector store
+- **NVIDIA AI Endpoints** for embeddings (`nvidia/nv-embed-v1`) and LLM (`nvidia/llama-3.1-nemotron-nano-vl-8b-v1`)
+- **pypdf** + **pdfplumber** (fallback) for PDF extraction
+- **pydantic-settings** for typed configuration from `.env`
+- **pytest** + **pytest-cov** for tests and coverage
+
+### Frontend
+- **React 19** + **TypeScript 5.6** + **Vite 6** (SPA + HMR)
+- **Tailwind CSS 4** for styling, with CSS variables for theming
+- **React Router 7** for routing
+- **Radix UI** (`@radix-ui/react-slot`) + **class-variance-authority** for the button component (shadcn-style)
+- **Lucide React** for icons
+- **Vitest** + **Testing Library** for unit/component tests
+
+### DevOps / Deploy
+- **Docker** + **Docker Compose** for local development and prod profiles
+- **CircleCI** + **Coveralls** for CI and coverage reporting
+- **Vercel** (frontend) + **Render** (backend Docker web service) + **Pinecone Serverless** (vector store) on free tiers
