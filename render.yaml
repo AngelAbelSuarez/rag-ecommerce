@@ -1,0 +1,37 @@
+# Render Blueprint — BimBam backend (FastAPI + Pinecone + NVIDIA)
+#
+# Usage:
+#   - Push this file to the repo root.
+#   - In Render dashboard: New + -> Blueprint -> select this repo.
+#   - Render will pick up services defined below.
+#
+# After creation, set these environment variables in the Render web service
+# (manually via the Render UI, since they are secrets):
+#   - NVIDIA_API_KEY
+#   - PINECONE_API_KEY
+#
+# PORT is injected automatically by Render and is read by the Dockerfile CMD.
+
+services:
+  - type: web
+    name: bimbam-backend
+    runtime: docker
+    region: oregon           # free tier supports docker web services; pick any free region
+    plan: free
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    healthCheckPath: /api/health
+    envVars:
+      - key: NVIDIA_API_KEY
+        sync: false           # set value manually in Render UI
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: PINECONE_INDEX_NAME
+        value: bimbam-docs
+      - key: PINECONE_NAMESPACE
+        value: bimbam_docs
+      - key: SIMILARITY_THRESHOLD
+        value: "0.0"
+      - key: LOG_LEVEL
+        value: INFO
