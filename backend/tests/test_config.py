@@ -6,22 +6,21 @@ from pathlib import Path
 from config import Settings
 
 
-def test_chroma_path_resolves_relative_to_backend():
-    settings = Settings(chroma_persist_dir="mi_chroma")
-    chroma_path = settings.chroma_path
-
-    assert isinstance(chroma_path, Path)
-    assert chroma_path.name == "mi_chroma"
-    assert chroma_path.parent.name == "backend"
+def test_pinecone_defaults(monkeypatch):
+    monkeypatch.setenv("PINECONE_API_KEY", "")
+    settings = Settings()
+    assert settings.pinecone_index_name == "bimbam-docs"
+    assert settings.pinecone_namespace == "bimbam_docs"
 
 
-def test_chroma_path_uses_chroma_persist_dir():
-    settings = Settings(chroma_persist_dir="data/vector_store")
-    chroma_path = settings.chroma_path
-
-    assert chroma_path.name == "vector_store"
-    assert chroma_path.parent.name == "data"
-    assert chroma_path.parent.parent.name == "backend"
+def test_pinecone_fields_from_env(monkeypatch):
+    monkeypatch.setenv("PINECONE_API_KEY", "pcsk-xxx")
+    monkeypatch.setenv("PINECONE_INDEX_NAME", "my-index")
+    monkeypatch.setenv("PINECONE_NAMESPACE", "my-ns")
+    settings = Settings()
+    assert settings.pinecone_api_key == "pcsk-xxx"
+    assert settings.pinecone_index_name == "my-index"
+    assert settings.pinecone_namespace == "my-ns"
 
 
 def test_documents_path_defaults_to_project_root_documents(monkeypatch):

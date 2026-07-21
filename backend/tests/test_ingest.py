@@ -175,8 +175,14 @@ def test_ingest_success(tmp_path: Path, monkeypatch):
     monkeypatch.setattr("ingest.settings.documents_dir", str(tmp_path))
     monkeypatch.setattr("ingest.settings.chunk_size", 500)
     monkeypatch.setattr("ingest.settings.chunk_overlap", 50)
-    monkeypatch.setattr("ingest.settings.chroma_persist_dir", str(tmp_path / "chroma"))
-    monkeypatch.setattr("ingest.settings.collection_name", "test_collection")
+    monkeypatch.setattr("ingest.settings.pinecone_api_key", "fake-key")
+    monkeypatch.setattr("ingest.settings.pinecone_index_name", "test-index")
+    monkeypatch.setattr("ingest.settings.pinecone_namespace", "test-ns")
+
+    mock_idx = MagicMock()
+    mock_pc = MagicMock()
+    mock_pc.Index.return_value = mock_idx
+    monkeypatch.setattr("ingest.Pinecone", lambda **kw: mock_pc)
 
     mock_vs = MagicMock()
     monkeypatch.setattr("ingest.get_vectorstore", lambda: mock_vs)
@@ -184,8 +190,8 @@ def test_ingest_success(tmp_path: Path, monkeypatch):
     files, chunks = ingest()
     assert files == 1
     assert chunks > 0
-    mock_vs.delete_collection.assert_called_once()
     mock_vs.add_documents.assert_called_once()
+    mock_idx.delete.assert_called_once_with(namespace="test-ns", delete_all=False)
 
 
 def test_ingest_skips_failing_pdf(tmp_path: Path, monkeypatch):
@@ -198,8 +204,9 @@ def test_ingest_skips_failing_pdf(tmp_path: Path, monkeypatch):
     monkeypatch.setattr("ingest.settings.documents_dir", str(tmp_path))
     monkeypatch.setattr("ingest.settings.chunk_size", 500)
     monkeypatch.setattr("ingest.settings.chunk_overlap", 0)
-    monkeypatch.setattr("ingest.settings.chroma_persist_dir", str(tmp_path / "chroma"))
-    monkeypatch.setattr("ingest.settings.collection_name", "test")
+    monkeypatch.setattr("ingest.settings.pinecone_api_key", "fake-key")
+    monkeypatch.setattr("ingest.settings.pinecone_index_name", "test-index")
+    monkeypatch.setattr("ingest.settings.pinecone_namespace", "test-ns")
 
     original_load = load_pdf
 
@@ -209,6 +216,11 @@ def test_ingest_skips_failing_pdf(tmp_path: Path, monkeypatch):
         return original_load(path)
 
     monkeypatch.setattr("ingest.load_pdf", flaky_load)
+
+    mock_idx = MagicMock()
+    mock_pc = MagicMock()
+    mock_pc.Index.return_value = mock_idx
+    monkeypatch.setattr("ingest.Pinecone", lambda **kw: mock_pc)
 
     mock_vs = MagicMock()
     monkeypatch.setattr("ingest.get_vectorstore", lambda: mock_vs)
@@ -231,6 +243,7 @@ def test_main_exits_when_no_api_key(monkeypatch):
 
 def test_main_success(monkeypatch, tmp_path):
     monkeypatch.setattr("ingest.settings.nvidia_api_key", "fake-key")
+    monkeypatch.setattr("ingest.settings.pinecone_api_key", "fake-pinecone-key")
 
     pdf_path = tmp_path / "doc.pdf"
     _make_pdf(pdf_path, ["contenido"])
@@ -238,8 +251,13 @@ def test_main_success(monkeypatch, tmp_path):
     monkeypatch.setattr("ingest.settings.documents_dir", str(tmp_path))
     monkeypatch.setattr("ingest.settings.chunk_size", 500)
     monkeypatch.setattr("ingest.settings.chunk_overlap", 0)
-    monkeypatch.setattr("ingest.settings.chroma_persist_dir", str(tmp_path / "chroma"))
-    monkeypatch.setattr("ingest.settings.collection_name", "test")
+    monkeypatch.setattr("ingest.settings.pinecone_index_name", "test-index")
+    monkeypatch.setattr("ingest.settings.pinecone_namespace", "test-ns")
+
+    mock_idx = MagicMock()
+    mock_pc = MagicMock()
+    mock_pc.Index.return_value = mock_idx
+    monkeypatch.setattr("ingest.Pinecone", lambda **kw: mock_pc)
 
     mock_vs = MagicMock()
     monkeypatch.setattr("ingest.get_vectorstore", lambda: mock_vs)
@@ -249,6 +267,7 @@ def test_main_success(monkeypatch, tmp_path):
 
 def test_main_handles_generic_exception(monkeypatch):
     monkeypatch.setattr("ingest.settings.nvidia_api_key", "fake-key")
+    monkeypatch.setattr("ingest.settings.pinecone_api_key", "fake-pinecone-key")
 
     def broken_ingest():
         raise ValueError("unexpected error")

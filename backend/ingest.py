@@ -1,11 +1,13 @@
 
 import logging
+import os
 import sys
 import time
 from pathlib import Path
 
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from pinecone import Pinecone
 
 from config import settings
 from store import get_vectorstore
@@ -118,23 +120,26 @@ def ingest() -> tuple[int, int]:
         logger.error("No chunks produced from any PDF")
         raise SystemExit(1)
 
-    logger.info("Embedding %d chunks into ChromaDB...", len(all_chunks))
-    vectorstore = get_vectorstore()
+    logger.info("Embedding %d chunks into Pinecone...", len(all_chunks))
 
+    os.environ.setdefault("PINECONE_API_KEY", settings.pinecone_api_key)
+    pc = Pinecone(api_key=settings.pinecone_api_key)
+    idx = pc.Index(settings.pinecone_index_name)
     try:
-        vectorstore.delete_collection()
-        logger.info("Replaced existing collection '%s'", settings.collection_name)
-    except Exception:
-        logger.info("Creating new collection '%s'", settings.collection_name)
+        idx.delete(namespace=settings.pinecone_namespace, delete_all=False)
+        logger.info("Deleted existing namespace '%s'", settings.pinecone_namespace)
+    except Exception as exc:
+        logger.info("Namespace '%s' did not exist or could not be deleted: %s", settings.pinecone_namespace, exc)
 
     vectorstore = get_vectorstore()
     vectorstore.add_documents(all_chunks)
 
     logger.info(
-        "Ingestion complete: %d files, %d chunks persisted to %s",
+        "Ingestion complete: %d files, %d chunks persisted to Pinecone index '%s' namespace '%s'",
         len(pdf_paths),
         len(all_chunks),
-        settings.chroma_path,
+        settings.pinecone_index_name,
+        settings.pinecone_namespace,
     )
     return len(pdf_paths), len(all_chunks)
 
@@ -142,6 +147,9 @@ def ingest() -> tuple[int, int]:
 def main() -> None:
     if not settings.nvidia_api_key:
         logger.error("NVIDIA_API_KEY not set")
+        sys.exit(1)
+    if not settings.pinecone_api_key:
+        logger.error("PINECONE_API_KEY not set")
         sys.exit(1)
 
     start = time.perf_counter()
