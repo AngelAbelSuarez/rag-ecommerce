@@ -191,7 +191,7 @@ def test_ingest_success(tmp_path: Path, monkeypatch):
     assert files == 1
     assert chunks > 0
     mock_vs.add_documents.assert_called_once()
-    mock_idx.delete.assert_called_once_with(namespace="test-ns", delete_all=False)
+    mock_idx.delete.assert_called_once_with(namespace="test-ns", delete_all=True)
 
 
 def test_ingest_skips_failing_pdf(tmp_path: Path, monkeypatch):
