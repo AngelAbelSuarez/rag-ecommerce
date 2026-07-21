@@ -125,12 +125,12 @@ def ingest() -> tuple[int, int]:
     os.environ.setdefault("PINECONE_API_KEY", settings.pinecone_api_key)
     pc = Pinecone(api_key=settings.pinecone_api_key)
     idx = pc.Index(settings.pinecone_index_name)
-    try:
-        idx.delete(namespace=settings.pinecone_namespace, delete_all=False)
+try:
+        idx.delete(namespace=settings.pinecone_namespace, delete_all=True)
         logger.info("Deleted existing namespace '%s'", settings.pinecone_namespace)
     except Exception as exc:
-        logger.info("Namespace '%s' did not exist or could not be deleted: %s", settings.pinecone_namespace, exc)
-
+        logger.info("Namespace '%s' did not exist or could not be deleted: %s",
+                     settings.pinecone_namespace, exc)
     vectorstore = get_vectorstore()
     vectorstore.add_documents(all_chunks)
 
